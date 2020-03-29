@@ -1,7 +1,7 @@
 from graph_module import ConvGraphEncoder, GraphGatedEncoder
 
 from collections import OrderedDict
-from common_module import EmbLayer
+from common_module import EmbLayer, TransformerModel
 from helper import log
 
 import torch
@@ -23,7 +23,7 @@ def get_graph_encoder(graph_encoder='conv'):
 class ZAGRNN(nn.Module):
     def __init__(self, word_emb, label_idx_matrix, label_idx_mask, adj_matrix, num_neighbors, loss_fn,
                  num_filters=200, kernel_sizes=(10, ), eval_label_size=None, label_hidden_size=200,
-                 graph_encoder='conv', target_count=None, C=0.):
+                 graph_encoder='conv', target_count=None, C=0., use_transformer=False):
 
         super(ZAGRNN, self).__init__()
         self.register_buffer('label_idx_matrix', torch.from_numpy(label_idx_matrix))
@@ -48,13 +48,17 @@ class ZAGRNN(nn.Module):
         self.output_proj = nn.Linear(num_filters, self.feat_size)
         xavier_uniform_(self.output_proj.weight)
 
-        self.conv_modules = nn.ModuleList()
-        for kernel_size in kernel_sizes:
-            self.conv_modules.append(nn.Conv1d(self.embed_size, num_filters, kernel_size=kernel_size))
-            xavier_uniform_(self.conv_modules[-1].weight)
+        self.use_transformer = use_transformer
+        if use_transformer:
+            self.trans = TransformerModel(self.embed_size, self.embed_size * 4, nlayers=3, dropout=0.1)
+        else:
+            self.conv_modules = nn.ModuleList()
+            for kernel_size in kernel_sizes:
+                self.conv_modules.append(nn.Conv1d(self.embed_size, num_filters, kernel_size=kernel_size))
+                xavier_uniform_(self.conv_modules[-1].weight)
 
-        self.proj = nn.Linear(num_filters, self.embed_size)
-        xavier_uniform_(self.proj.weight)
+            self.proj = nn.Linear(num_filters, self.embed_size)
+            xavier_uniform_(self.proj.weight)
 
         if target_count is not None:
             class_margin = torch.from_numpy(target_count) ** 0.25
@@ -84,29 +88,37 @@ class ZAGRNN(nn.Module):
         graph_label_emb = self.graph_label_encoder(avg_label_emb, self.adj_matrix, self.num_neighbors)
         return avg_label_emb, graph_label_emb
 
-    def conv_attn(self, inp, label_emb):
+    def conv_attn(self, inp, label_emb, mask):
         outputs = []
         attn_scores = []
         label_emb = label_emb[:self.eval_label_size]
-
-        for conv in self.conv_modules:
-            x = conv(inp.transpose(1, 2))  # B x F x T
-            x = torch.relu(x).transpose(1, 2)  # B x T x F
-
-            proj_x = self.proj(x)  # B x T x d
-            proj_x = torch.tanh(proj_x)
-            attn_score = torch.matmul(proj_x, label_emb.t()).transpose(1, 2)    # B x L x T
-
+        if self.use_transformer:
+            x = self.trans(inp.transpose(0, 1), (1 - mask).type(torch.bool))
+            x = x.transpose(0, 1)
+            proj_x = x
+            attn_score = torch.matmul(proj_x, label_emb.t()).transpose(1, 2)  # B x L x T
             attn_score = F.softmax(attn_score, dim=2)  # B x L x T
             attn_score = self.attn_drop(attn_score)
+            output = attn_score.matmul(x)  # B x L x F
+        else:
+            for conv in self.conv_modules:
+                x = conv(inp.transpose(1, 2))  # B x F x T
+                x = torch.relu(x).transpose(1, 2)  # B x T x F
 
-            attn_output = attn_score.matmul(x)  # B x L x F
+                proj_x = self.proj(x)  # B x T x d
+                proj_x = torch.tanh(proj_x)
+                attn_score = torch.matmul(proj_x, label_emb.t()).transpose(1, 2)    # B x L x T
 
-            outputs.append(attn_output)
-            attn_scores.append(attn_score)
+                attn_score = F.softmax(attn_score, dim=2)  # B x L x T
+                attn_score = self.attn_drop(attn_score)
 
-        output = torch.cat(outputs, dim=-1)
-        attn_scores = torch.cat(attn_scores, dim=-1)
+                attn_output = attn_score.matmul(x)  # B x L x F
+
+                outputs.append(attn_output)
+                attn_scores.append(attn_score)
+
+            output = torch.cat(outputs, dim=-1)
+            attn_scores = torch.cat(attn_scores, dim=-1)
 
         return output, attn_scores
 
@@ -116,7 +128,7 @@ class ZAGRNN(nn.Module):
             x = torch.mul(x, mask.unsqueeze(2))
 
         x = self.emb_drop(x)
-        attn_output, attn_scores = self.conv_attn(x, label_emb)
+        attn_output, attn_scores = self.conv_attn(x, label_emb, mask)
         direct_feats = self.output_proj(attn_output)
 
         return direct_feats, attn_output, attn_scores
