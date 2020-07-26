@@ -1,3 +1,18 @@
+# Copyright 2020 Petuum, Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import numpy as np
 from sklearn.metrics import precision_recall_curve, roc_auc_score, auc
 
@@ -37,8 +52,8 @@ def all_macro(yhat, y):
 
 
 def all_micro(yhatmic, ymic):
-    return micro_accuracy(yhatmic, ymic), micro_precision(yhatmic, ymic), micro_recall(yhatmic, ymic), micro_f1(yhatmic,
-                                                                                                                ymic)
+    return micro_accuracy(yhatmic, ymic), micro_precision(yhatmic, ymic), micro_recall(yhatmic, ymic), \
+           micro_f1(yhatmic, ymic)
 
 
 #########################################################################
@@ -84,31 +99,6 @@ def micro_precision(yhatmic, ymic):
 
 def micro_recall(yhatmic, ymic):
     return intersect_size(yhatmic, ymic, 0) / ymic.sum(axis=0)
-
-
-def micro_metrics(yhatmic, ymic):
-    tps = 0.     # true positives
-    pred_pos = 0.   # predicted as positive (for precision)
-    real_pos = 0.     # labeled as positive (for recall)
-    num_classes = yhatmic.shape[1]
-
-    for c in range(num_classes):
-        yhat_c = yhatmic[:, c]
-        y_c = ymic[:, c]
-        tps += np.logical_and(yhat_c, y_c).sum()
-        pred_pos += yhat_c.sum()
-        real_pos += y_c.sum()
-
-    precision = tps / (pred_pos + 1e-10)
-    recall = tps / real_pos
-
-    if precision + recall == 0:
-        f1 = 0.
-    else:
-        f1 = 2 * (precision * recall) / (precision + recall)
-
-    accuracy = np.mean(yhatmic.flatten() == ymic.flatten())
-    return accuracy, precision, recall, f1
 
 
 def micro_f1(yhatmic, ymic):

@@ -1,9 +1,49 @@
-import math
+# Copyright 2020 Petuum, Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
+from torch.nn import BCEWithLogitsLoss, MultiLabelMarginLoss
 from torch.optim.optimizer import Optimizer
-from torch.nn.modules.transformer import TransformerEncoder, TransformerEncoderLayer
+
+EPS = 1e-7
+
+
+def get_loss_fn(loss='FOCAL', reduction='sum'):
+    if loss.upper() == 'FOCAL':
+        return FocalLoss2d(reduction=reduction)
+    elif loss.upper() == 'BCE':
+        return BCEWithLogitsLoss(reduction=reduction)
+    elif loss.upper() == 'MULTI':
+        return MultiLabelMarginLoss(reduction=reduction)
+    else:
+        ValueError(loss)
+
+
+def add_emb_weight_decay(model, weight_decay, emb_weight_decay=1e-2):
+    decay, no_decay = [], []
+    for name, param in model.named_parameters():
+        if name == 'emb.embed.weight':
+            decay.append(param)
+            continue
+        else:
+            no_decay.append(param)
+
+    return [{'params': no_decay, 'weight_decay': weight_decay}, {'params': decay, 'weight_decay': emb_weight_decay}]
 
 
 def get_optimizer(lr, model, freeze_emb=False, opt='ADAM', weight_decay=1e-4):
@@ -28,9 +68,10 @@ def get_scheduler(optimizer, num_epochs, ratios=(0.6, 0.8)):
 
 
 class EmbLayer(nn.Module):
-    def __init__(self, embed_size, vocab_size, pad_idx=0, W=None, freeze_emb=True):
+    def __init__(self, embed_size, vocab_size, pad_idx=0, use_emb=True, W=None, freeze_emb=True):
         super(EmbLayer, self).__init__()
-        if W is not None:
+        if use_emb:
+            assert W is not None
             W = torch.from_numpy(W)
             self.embed = nn.Embedding(W.size()[0], W.size()[1], padding_idx=pad_idx)
             self.embed.weight.data = W.clone()
@@ -47,39 +88,39 @@ class EmbLayer(nn.Module):
         return self.embed(x)
 
 
-class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
-        super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
+class FocalLoss2d(nn.modules.loss._WeightedLoss):
+    def __init__(self, gamma=2, weight=None, size_average=None, ignore_index=-100,
+                 reduce=None, reduction='sum', balance_param=0.25):
+        super(FocalLoss2d, self).__init__(weight, size_average, reduce, reduction)
+        self.gamma = gamma
+        self.weight = weight
+        self.size_average = size_average
+        self.ignore_index = ignore_index
+        self.balance_param = balance_param
 
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0).transpose(0, 1)
-        self.register_buffer('pe', pe)
+    def forward(self, logits, targets):
+        # inputs and targets are assumed to be Batch x Classes
+        assert logits.size(0) == targets.size(0)
+        assert logits.size(1) == targets.size(1)
 
-    def forward(self, x):
-        x = x + self.pe[:x.size(0), :]
-        return self.dropout(x)
+        weight = None
+        if self.weight is not None:
+            weight = torch.from_numpy(self.weight)
 
+        # compute the negative likelihood
+        logpt = - F.binary_cross_entropy_with_logits(logits, targets, pos_weight=weight, reduce=False)
+        pt = torch.exp(logpt)
 
-class TransformerModel(nn.Module):
-    def __init__(self, ninp, nhid, nhead=4, nlayers=1, dropout=0.5):
-        super(TransformerModel, self).__init__()
-        self.model_type = 'Transformer'
-        self.ninp = ninp
+        # compute the loss
+        focal_loss = -((1. - pt) ** self.gamma) * logpt
+        balanced_focal_loss = self.balance_param * focal_loss
 
-        self.pos_encoder = PositionalEncoding(ninp, 0.)
-        encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
-        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-
-    def forward(self, src, mask):
-        src = src * math.sqrt(self.ninp)
-        src = self.pos_encoder(src)
-        output = self.transformer_encoder(src, src_key_padding_mask=mask)
-        return output
+        if self.reduction == 'sum':
+            return torch.sum(balanced_focal_loss)
+        elif self.reduction == 'mean':
+            return torch.mean(balanced_focal_loss)
+        else:
+            return balanced_focal_loss
 
 
 class AdamW(Optimizer):
@@ -128,7 +169,14 @@ class AdamW(Optimizer):
                     update += group['weight_decay'] * p.data
 
                 state['step'] += 1
-                step_size = group['lr']
+
+                # lr_scheduled = group['lr']
+                # update_with_lr = lr_scheduled * update
+                # p.data.add_(-update_with_lr)
+
+                # bias_correction1 = 1 - beta1 ** state['step']
+                # bias_correction2 = 1 - beta2 ** state['step']
+                step_size = group['lr']  # * math.sqrt(bias_correction2) / bias_correction1
                 p.data.add_(-step_size * update)
 
         return loss
