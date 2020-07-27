@@ -28,12 +28,16 @@ if not os.path.exists(ICD_DATA_DIR):
 
 # processed MIMIC-III data
 PROCESSED_DIR = f'{ICD_DATA_DIR}/processed'
+if not os.path.exists(PROCESSED_DIR):
+    os.mkdir(PROCESSED_DIR)
+
 # path for caching all processed training data
 CACHE_PATH = f'{PROCESSED_DIR}/preloaded_train.npz'
 
 # resources including vocabs, embeddings, ICD code domain knowledge, keywords etc
 RESOURCES_DIR = f'{ICD_DATA_DIR}/resources'
-VOCAB_PATH = f'{RESOURCES_DIR}/vocab_to_ix.pkl'
+VOCAB_PATH = f'{RESOURCES_DIR}/vocab.txt'
+VOCAB_DICT_PATH = f'{RESOURCES_DIR}/vocab_to_ix.pkl'
 EMBEDDING_PATH = f'{RESOURCES_DIR}/icd_word_emb.pkl'
 KEYWORDS_PATH = f'{RESOURCES_DIR}/mimic3_note_keywords.pkl'
 ICD_CODE_HIERARCHY_PATH = f'{RESOURCES_DIR}/icd_code_hierarchy.txt'

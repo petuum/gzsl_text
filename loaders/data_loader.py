@@ -15,7 +15,6 @@
 
 import copy
 import os
-import pickle
 from collections import defaultdict
 
 import numpy as np
@@ -26,9 +25,13 @@ from constant import ICD_CODE_HIERARCHY_PATH, ICD_CODE_DESC_DATA_PATH, SPLIT_DIR
 from utils.helper import log
 
 
-def load_vocab(vocab_path=VOCAB_PATH):
-    with open(vocab_path, 'rb') as f:
-        vocab_to_ix = pickle.load(f)
+def load_vocab():
+    vocab_to_ix = dict()
+    with open(VOCAB_PATH) as f:
+        i = 0
+        for line in f:
+            vocab_to_ix[line.strip()] = i
+            i += 1
     return vocab_to_ix
 
 
@@ -95,14 +98,13 @@ def preload_data(train_notes, train_labels, codes_to_targets, max_note_len=2000,
         x.append(xx)
         mask.append(m)
         row += 1
-        # print(row)
 
     x = np.vstack(x).astype(int)
     y = np.asarray(y)
     mask = np.vstack(mask).astype(np.float32)
 
     if save_path is not None:
-        log(f'Saving to {save_path}...')
+        log(f'Saving training data cache to {save_path}...')
         np.savez(save_path, x, y, mask)
 
     return x, y, mask

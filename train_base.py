@@ -211,7 +211,7 @@ def eval_trained(eval_batch_size=16, max_note_len=2000, loss='bce', gpu='cuda:1'
                                graph_encoder=graph_encoder, eval_code_size=eval_code_size,
                                target_count=target_count if class_margin else None, C=C)
 
-    pretrained_model_path = f"{MODEL_DIR}/final_{model.name}"
+    pretrained_model_path = f"{MODEL_DIR}/{model.name}"
     pretrained_dict = load_first_stage_model(pretrained_model_path, device)
 
     model_dict = model.state_dict()
@@ -227,7 +227,6 @@ def eval_trained(eval_batch_size=16, max_note_len=2000, loss='bce', gpu='cuda:1'
     log('Preloading data in memory...')
     dev_x, dev_y, dev_masks = preload_data(dev_notes, dev_labels, codes_to_targets, max_note_len)
     test_x, test_y, test_masks = preload_data(test_notes, test_labels, codes_to_targets, max_note_len)
-    log('Evaluating...')
 
     def eval_wrapper(x, y, masks):
         y_true = []
@@ -250,9 +249,11 @@ def eval_trained(eval_batch_size=16, max_note_len=2000, loss='bce', gpu='cuda:1'
         y_true = np.vstack(y_true).astype(int)
         return y_true, y_score
 
+    log('Evaluating on dev set...')
     dev_true, dev_score = eval_wrapper(dev_x, dev_y, dev_masks)
     log_eval_metrics(0, dev_score, dev_true, dev_freq_indices, dev_few_shot_indices, dev_zero_shot_indices)
 
+    log('Evaluating on test set...')
     test_true, test_score = eval_wrapper(test_x, test_y, test_masks)
     log_eval_metrics(0, test_score, test_true, test_freq_indices, test_few_shot_indices, test_zero_shot_indices)
 

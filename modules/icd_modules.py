@@ -60,7 +60,7 @@ class ConvLabelAttnModel(nn.Module):
 
         graph_encoder = get_graph_encoder(graph_encoder)
         if graph_encoder is not None:
-            log(f'Using {graph_encoder} for encoding ICD hierarchy...')
+            log(f'Using {graph_encoder.__name__} for encoding ICD hierarchy...')
             self.graph_label_encoder = graph_encoder(self.embed_size, label_hidden_size, self.n_nodes)
             self.feat_size += label_hidden_size
         else:
