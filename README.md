@@ -34,4 +34,5 @@ To train the GAN model, run ```python3 train_gan.py```.  The default hyper-param
 
 ### Step 2: Fine-tuning ICD code classifiers
 The final step is to fine-tune the classifiers in pre-trained model using GAN generated features for few-shot and zero-shot codes.
-For fine-tuning, run ```python3 finetune.py```
+For fine-tuning, run ```python3 finetune.py```. The default hyper-parameters is set in ```get_finetune_config``` function in ```config.py```.
+Please set the arguments related to base model the same as in Step 0 and arguments related to GAN model the same as in Step 1.
