@@ -15,7 +15,7 @@ Implementation for IJCAI 2020 paper: [Generalized Zero-Shot Text Classification 
 ### Dataset and preprocessing
 Please modify ```ICD_DATA_DIR``` in ```constant.py```, which will be the main directory for saving processed data, models etc. To get started, download [```resources.tar.gz```](https://drive.google.com/file/d/1WNLxdmRclD2gHvNRhQ-IwptN_eFwrqU2/view?usp=sharing) and extract it to ```ICD_DATA_DIR/resources```. The ```resources``` directory contains all the necessary vocabulary, embeddings, data splits files which will be used for preprocessing and training.  
 
-The preprocessing script is expecting raw MIMIC-III database saved in ```/path/to/MIMIC-III/```. In particular, there should be two csv files: ```/path/to/MIMIC-III/NOTEEVENTS.csv``` and ```/path/to/MIMIC-III/DIAGNOSES_ICD.csv```
+The preprocessing script is expecting raw [MIMIC-III database](https://mimic.physionet.org/) saved in ```/path/to/MIMIC-III/```. In particular, there should be two csv files: ```/path/to/MIMIC-III/NOTEEVENTS.csv``` and ```/path/to/MIMIC-III/DIAGNOSES_ICD.csv```
 
 For preprocessing the raw MIMIC-III datasets, run: ```python3 preprocess.py --mimic_dir=/path/to/MIMIC-III/```,
 which will extract and tokenizing patient notes accordingly and save to ```ICD_DATA_DIR/processed``` directory.
