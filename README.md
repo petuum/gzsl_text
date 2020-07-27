@@ -13,7 +13,7 @@ Implementation for IJCAI 2020 paper: [Generalized Zero-Shot Text Classification 
 * pandas==0.24.2
 
 ### Dataset and preprocessing
-Please modify ```ICD_DATA_DIR``` in ```constant.py```, which will be the main directory for saving processed data, models etc. To get started, download [```resources.tar.gz```](templink) and extract it to ```ICD_DATA_DIR/resources```. The ```resources``` directory contains all the necessary vocabulary, embeddings, data splits files which will be used for preprocessing and training.  
+Please modify ```ICD_DATA_DIR``` in ```constant.py```, which will be the main directory for saving processed data, models etc. To get started, download [```resources.tar.gz```](https://drive.google.com/file/d/1WNLxdmRclD2gHvNRhQ-IwptN_eFwrqU2/view?usp=sharing) and extract it to ```ICD_DATA_DIR/resources```. The ```resources``` directory contains all the necessary vocabulary, embeddings, data splits files which will be used for preprocessing and training.  
 
 The preprocessing script is expecting raw MIMIC-III database saved in ```/path/to/MIMIC-III/```. In particular, there should be two csv files: ```/path/to/MIMIC-III/NOTEEVENTS.csv``` and ```/path/to/MIMIC-III/DIAGNOSES_ICD.csv```
 
@@ -24,7 +24,7 @@ which will extract and tokenizing patient notes accordingly and save to ```ICD_D
 The GAN model is based on a pre-trained feature extractor. To train the feature extractor model, run ```python3 train_base.py```.
 The default hyper-parameters is set in ```get_base_config``` function in ```config.py```. In particular, we use LDAM loss function by setting ```--class_margin C=2.0``` and GRNN for encoding ICD hierarcy by setting ```--graph_encoder=gate```.
 
-We also provide our trained base model. Please download [```models.tar.gz```](templink) and extract it to ```ICD_DATA_DIR/models```. To evaluate the base model, run ```python3 train_base.py --evaluate```.
+We also provide our trained base model. Please download [```models.tar.gz```](https://drive.google.com/file/d/12K5_V693QN0ASbhlGhJWpUeG8BNqcKqy/view?usp=sharing) and extract it to ```ICD_DATA_DIR/models```. To evaluate the base model, run ```python3 train_base.py --evaluate```.
 
 ### Step 1: Training GAN model
 To train the GAN model, run ```python3 train_gan.py```.  The default hyper-parameters is set in ```get_gan_config``` function in ```config.py```. 
