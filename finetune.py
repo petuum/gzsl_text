@@ -310,6 +310,7 @@ def finetune_on_gan(eval_zero=True, lr=1e-5, batch_size=8, eval_batch_size=16, n
 
 if __name__ == '__main__':
     finetune_config = get_finetune_config()
+    log('Finetuning code classifier with GAN generated features...')
     finetune_on_gan(eval_zero=finetune_config.eval_zero,
                     gpu=finetune_config.gpu,
                     lr=finetune_config.lr,

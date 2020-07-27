@@ -46,7 +46,7 @@ def is_discharge_summary(note_category):
     return 'discharge summary' in note_category.lower().strip()
 
 
-def make_patient_dict(mimic_dir):
+def get_patient_data(mimic_dir):
     read_file = f'{mimic_dir}/NOTEEVENTS.csv'
     log(f'Reading {read_file} ...')
     df_notes = pandas.read_csv(read_file, low_memory=False, dtype=str)
@@ -107,8 +107,8 @@ def concat_and_write(list_of_notes, concatenated_file):
     f.close()
 
 
-def make_text_files(mimic_dir, save_dir):
-    patient_dict = make_patient_dict(mimic_dir)
+def extract_text_files(mimic_dir, save_dir):
+    patient_dict = get_patient_data(mimic_dir)
 
     text_save_dir = f'{save_dir}/text_files/'
     make_folder(text_save_dir)
@@ -138,7 +138,7 @@ def make_text_files(mimic_dir, save_dir):
     log(f'Written {total_txt_count} text files to {save_dir}')
 
 
-def preprocess_raw_text(save_dir):
+def tokenize_raw_text(save_dir):
     text_save_dir = os.path.join(save_dir, 'text_files')
     numpy_vectors_save_dir = os.path.join(save_dir, 'numpy_vectors')
     remove_folder(numpy_vectors_save_dir)
@@ -155,7 +155,7 @@ def preprocess_raw_text(save_dir):
         vocab = pickle.load(f)
     tokenizer = Tokenizer(vocab)
 
-    for hadm in tqdm.tqdm(hadms, desc='Generating processed texts'):
+    for hadm in tqdm.tqdm(hadms, desc='Tokenizing raw patient notes'):
         text = open(os.path.join(text_save_dir, str(hadm) + ".txt"), "r").read()
         words = tokenizer.process(text)
         vector = []
@@ -173,5 +173,5 @@ def preprocess_raw_text(save_dir):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    make_text_files(args.mimic_dir, PROCESSED_DIR)
-    preprocess_raw_text(PROCESSED_DIR)
+    extract_text_files(args.mimic_dir, PROCESSED_DIR)
+    tokenize_raw_text(PROCESSED_DIR)

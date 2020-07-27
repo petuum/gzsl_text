@@ -261,6 +261,7 @@ def eval_trained(eval_batch_size=16, max_note_len=2000, loss='bce', gpu='cuda:1'
 if __name__ == '__main__':
     config = get_base_config()
     if config.evaluate:
+        log('Evaluating base model...')
         eval_trained(eval_batch_size=config.eval_batch_size,
                      max_note_len=config.max_note_len,
                      loss=config.loss,
@@ -270,6 +271,7 @@ if __name__ == '__main__':
                      class_margin=config.class_margin,
                      C=config.C)
     else:
+        log('Training base model...')
         train(lr=config.lr,
               batch_size=config.batch_size,
               eval_batch_size=config.eval_batch_size,

@@ -344,6 +344,7 @@ def train_generative(lr=1e-4, num_epochs=30, critic_iters=1, max_note_len=2000, 
 
 if __name__ == '__main__':
     gan_config = get_gan_config()
+    log('Training GAN model...')
     train_generative(gpu=gan_config.gpu,
                      graph_encoder=gan_config.graph_encoder,
                      class_margin=gan_config.class_margin,
