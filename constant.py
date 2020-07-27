@@ -42,7 +42,14 @@ EMBEDDING_PATH = f'{RESOURCES_DIR}/icd_word_emb.pkl'
 KEYWORDS_PATH = f'{RESOURCES_DIR}/mimic3_note_keywords.pkl'
 ICD_CODE_HIERARCHY_PATH = f'{RESOURCES_DIR}/icd_code_hierarchy.txt'
 ICD_CODE_DESC_DATA_PATH = f'{RESOURCES_DIR}/code_desc_vocab.npz'
+
+for file in [VOCAB_DICT_PATH, EMBEDDING_PATH, KEYWORDS_PATH, ICD_CODE_HIERARCHY_PATH, ICD_CODE_DESC_DATA_PATH]:
+    assert os.path.exists(file), f"{file} is missing," \
+                                 f" please download and extract resources.tar.gz according to README.md"
+
 SPLIT_DIR = f'{RESOURCES_DIR}/splits'
+assert os.path.isdir(SPLIT_DIR), "Data splits is missing, " \
+                                 "please download and extract resources.tar.gz according to README.md"
 
 # directory to save models
 MODEL_DIR = f'{ICD_DATA_DIR}/models'
